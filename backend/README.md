@@ -30,23 +30,34 @@ Frontend (Vue 3) → Flask REST API → Celery + Redis → GPU Workers → Stora
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install dependencies:**
+3. **Installing PyTorch with CUDA Support:**
+
+   If you have NVIDIA GPUs, install PyTorch with CUDA support first:
+
+   ```bash
+   # For CUDA 12.x (recommended for CUDA 12.8 toolkit)
+   pip install torch==2.5.1 torchvision --index-url https://download.pytorch.org/whl/cu121
+   ```
+
+   **Note:** This configuration is tested with CUDA 12.8 toolkit and NVIDIA Driver 580.95.05 (RTX 4090/5080).
+
+4. **Install remaining dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment:**
+5. **Configure environment:**
    ```bash
    cp .env.example .env
    # Edit .env as needed
    ```
 
-5. **Start Flask API:**
+6. **Start Flask API:**
    ```bash
    flask run --debug
    ```
 
-6. **Start Celery workers (in separate terminals):**
+7. **Start Celery workers (in separate terminals):**
    ```bash
    # GPU worker
    celery -A app.tasks worker -Q gpu --concurrency=1 --loglevel=info
