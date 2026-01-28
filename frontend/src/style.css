@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brand-white text-brand-dark antialiased dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300;
+  }
+
+  :root {
+    /* Loader Colors - Light Mode (Dark Gray Theme) */
+    --loader-left: #453D3D;
+    --loader-right: #564D4D;
+    --loader-top: #7A6E6E;
+  }
+
+  :root.dark {
+    /* Loader Colors - Dark Mode (Teal Theme) */
+    --loader-left: #008C94;
+    --loader-right: #00AFB9;
+    --loader-top: #33BFC7;
+  }
+}
