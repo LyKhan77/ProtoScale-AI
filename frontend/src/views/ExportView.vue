@@ -2,11 +2,6 @@
 import { useProcessStore } from '../stores/process';
 
 const store = useProcessStore();
-
-function downloadFile(ext) {
-  // Mock download
-  alert(`Downloading ${ext} file...`);
-}
 </script>
 
 <template>
@@ -24,7 +19,7 @@ function downloadFile(ext) {
 
     <div class="grid gap-4 w-full max-w-md">
       <button 
-        @click="downloadFile('STL')"
+        @click="store.downloadStl"
         class="flex items-center justify-between w-full p-4 bg-brand-dark dark:bg-gray-700 text-white rounded-xl shadow-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors group"
       >
         <div class="flex items-center gap-3">
@@ -42,7 +37,7 @@ function downloadFile(ext) {
       </button>
 
       <button 
-        @click="downloadFile('OBJ')"
+        @click="store.downloadObj"
         class="flex items-center justify-between w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-brand-dark dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
       >
         <div class="flex items-center gap-3">

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6352:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./storage:/app/storage
+      - ./app:/app/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: flask run --host=0.0.0.0 --port=5000
+
+  worker-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GPU_DEVICE=cuda
+    volumes:
+      - ./storage:/app/storage
+      - ./app:/app/app
+      - model_cache:/root/.cache
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    command: celery -A app.tasks worker -Q gpu --concurrency=1 --loglevel=info
+
+  worker-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    volumes:
+      - ./storage:/app/storage
+      - ./app:/app/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks worker -Q cpu --concurrency=4 --loglevel=info
+
+volumes:
+  redis_data:
+  model_cache:
