@@ -17,10 +17,6 @@ const store = useProcessStore();
     
     <div class="flex items-center gap-4">
       <ThemeToggle />
-      <div class="flex items-center gap-2">
-        <div class="w-2 h-2 rounded-full bg-brand-teal animate-pulse"></div>
-        <span class="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase tracking-wider">System Operational</span>
-      </div>
     </div>
   </header>
 </template>
