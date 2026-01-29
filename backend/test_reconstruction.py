@@ -40,8 +40,8 @@ def test_preprocessing(job_id: str):
     job_storage = get_job_storage()
 
     # Find uploaded image
-    upload_files = list(upload_storage.storage_path.glob("*.png")) + \
-                   list(upload_storage.storage_path.glob("*.jpg"))
+    upload_files = list(upload_storage.base_dir.glob("*.png")) + \
+                   list(upload_storage.base_dir.glob("*.jpg"))
 
     if not upload_files:
         logger.error("No uploaded images found")
