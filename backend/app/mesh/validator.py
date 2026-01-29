@@ -161,11 +161,11 @@ class MeshValidator:
                 thickness_result = {"passes": True, "error": str(e)}
 
         result = {
-            "watertight": watertight,
-            "manifold": manifold,
-            "degenerate_faces": degenerate_count,
+            "watertight": bool(watertight),
+            "manifold": bool(manifold),
+            "degenerate_faces": int(degenerate_count),
             "wall_thickness": thickness_result,
-            "is_valid": watertight and manifold and degenerate_count == 0,
+            "is_valid": bool(watertight and manifold and degenerate_count == 0),
         }
 
         logger.info(f"Validation result: {result}")

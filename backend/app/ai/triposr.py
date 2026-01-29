@@ -42,6 +42,8 @@ def load_model():
     try:
         from tsr.system import TSR
 
+        logger.info(f"Loading TripoSR from {config.TRIPOSR_MODEL_ID}...")
+
         # Load on CPU first - will move to GPU only during inference
         _model = TSR.from_pretrained(
             config.TRIPOSR_MODEL_ID,
@@ -54,13 +56,14 @@ def load_model():
 
         logger.info("TripoSR model loaded on CPU (will move to GPU for inference)")
 
-    except ImportError:
-        logger.warning("TripoSR not installed, using fallback mesh generation")
+    except ImportError as e:
+        logger.error(f"TripoSR not installed: {e}. Using fallback mesh generation")
         _model = "fallback"
 
     except Exception as e:
-        logger.error(f"Failed to load TripoSR: {e}")
-        raise
+        logger.error(f"Failed to load TripoSR model: {type(e).__name__}: {e}", exc_info=True)
+        logger.warning("Falling back to simple mesh generation")
+        _model = "fallback"
 
     return _model
 
