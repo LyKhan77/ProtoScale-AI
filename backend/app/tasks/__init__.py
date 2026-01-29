@@ -46,9 +46,14 @@ celery_app.conf.update(
     # Task result expiration
     result_expires=86400,  # 24 hours
 
-    # Task acknowledgement
-    task_acks_late=True,
-    task_reject_on_worker_lost=True,
+    # Redis broker visibility timeout - must be longer than longest task
+    # Multi-angle generation can take ~60-90 min with sequential CPU offload
+    broker_transport_options={
+        "visibility_timeout": 7200,  # 2 hours
+    },
+
+    # Task acknowledgement - ack early to prevent re-delivery
+    task_acks_late=False,
 
     # Retry policy
     task_default_retry_delay=30,
