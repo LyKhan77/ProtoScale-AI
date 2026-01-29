@@ -49,9 +49,9 @@ def load_pipeline():
             torch_dtype=dtype,
         )
 
-        # Use CPU offload - automatically moves components to GPU only when needed
-        # This avoids OOM on 24GB GPUs since full model is ~23GB
-        _pipeline.enable_model_cpu_offload()
+        # Use sequential CPU offload - moves individual layers to GPU one at a time
+        # This keeps peak VRAM ~8GB instead of loading entire components (~15GB each)
+        _pipeline.enable_sequential_cpu_offload()
 
         # Load LoRA adapters
         _pipeline.load_lora_weights(
