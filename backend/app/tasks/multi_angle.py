@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 
 @celery_app.task(name="app.tasks.multi_angle.generate_multi_angles", bind=True)
-def generate_multi_angles(self, previous_result, job_id: str):
+def generate_multi_angles(self, job_id: str):
     """Generate multi-angle views of the uploaded image.
 
     Uses Qwen Image Edit with Multiple Angles LoRA to generate

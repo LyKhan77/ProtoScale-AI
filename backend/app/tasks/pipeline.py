@@ -38,8 +38,10 @@ def start_pipeline(self, job_id: str):
     logger.info(f"Starting pipeline for job {job_id}")
 
     # Create task chain
+    # First task uses si() (immutable) since it has no previous result
+    # Subsequent tasks use s(job_id) and receive previous result as first arg
     pipeline = chain(
-        generate_multi_angles.s(job_id),
+        generate_multi_angles.si(job_id),
         preprocess_image.s(job_id),
         reconstruct_3d.s(job_id),
         repair_mesh.s(job_id),
