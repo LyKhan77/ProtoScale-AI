@@ -42,16 +42,17 @@ def load_model():
     try:
         from tsr.system import TSR
 
+        # Load on CPU first - will move to GPU only during inference
         _model = TSR.from_pretrained(
             config.TRIPOSR_MODEL_ID,
             config_name="config.yaml",
             weight_name="model.ckpt",
-        ).to(device)
+        ).cpu()
 
         # Set to eval mode
         _model.eval()
 
-        logger.info(f"TripoSR model loaded on {device}")
+        logger.info("TripoSR model loaded on CPU (will move to GPU for inference)")
 
     except ImportError:
         logger.warning("TripoSR not installed, using fallback mesh generation")
@@ -129,6 +130,10 @@ def reconstruct_mesh(
     processed_image = preprocess_image(image)
 
     try:
+        # Move model to GPU for inference
+        logger.info(f"Moving TripoSR to {device} for inference...")
+        model.to(device)
+
         with torch.no_grad():
             # Run inference
             scene_codes = model([processed_image], device=device)
@@ -148,6 +153,13 @@ def reconstruct_mesh(
     except Exception as e:
         logger.error(f"Mesh reconstruction failed: {e}")
         raise
+
+    finally:
+        # Always move back to CPU and free GPU memory
+        model.cpu()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        logger.info("TripoSR moved back to CPU, GPU memory freed")
 
 
 def cleanup():

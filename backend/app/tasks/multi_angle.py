@@ -39,6 +39,7 @@ def generate_multi_angles(self, job_id: str):
 
         # Import AI module
         from app.ai.qwen_multi_angle import generate_multi_angle_views
+        import torch
 
         # Generate views at different azimuths
         job_service.update_progress(job_id, 10)
@@ -49,6 +50,11 @@ def generate_multi_angles(self, job_id: str):
         # Generate multi-angle images
         azimuths = [0, 90, 180, 270]  # front, right, back, left
         generated_images = generate_multi_angle_views(input_image, azimuths)
+
+        # Free GPU memory after generation
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.info("GPU memory cleared after multi-angle generation")
 
         job_service.update_progress(job_id, 20)
 

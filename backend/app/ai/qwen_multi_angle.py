@@ -43,11 +43,15 @@ def load_pipeline():
     try:
         from diffusers import QwenImageEditPlusPipeline
 
-        # Load base model
+        # Load base model on CPU first, then use offloading
         _pipeline = QwenImageEditPlusPipeline.from_pretrained(
             "Qwen/Qwen-Image-Edit-2511",
             torch_dtype=dtype,
-        ).to(device)
+        )
+
+        # Use CPU offload - automatically moves components to GPU only when needed
+        # This avoids OOM on 24GB GPUs since full model is ~23GB
+        _pipeline.enable_model_cpu_offload()
 
         # Load LoRA adapters
         _pipeline.load_lora_weights(
@@ -62,7 +66,7 @@ def load_pipeline():
         # Activate both adapters
         _pipeline.set_adapters(["lightning", "angles"], adapter_weights=[1.0, 1.0])
 
-        logger.info(f"Qwen pipeline loaded on {device}")
+        logger.info(f"Qwen pipeline loaded with CPU offload on {device}")
 
     except Exception as e:
         logger.error(f"Failed to load Qwen pipeline: {e}")
