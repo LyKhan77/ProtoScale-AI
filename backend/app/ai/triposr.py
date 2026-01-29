@@ -142,7 +142,7 @@ def reconstruct_mesh(
             scene_codes = model([processed_image], device=device)
 
             # Extract mesh
-            meshes = model.extract_mesh(scene_codes, resolution=resolution)
+            meshes = model.extract_mesh(scene_codes, resolution=resolution, has_vertex_color=False)
 
             if len(meshes) == 0:
                 raise ValueError("No mesh generated")
