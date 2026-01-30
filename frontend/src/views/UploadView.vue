@@ -64,7 +64,12 @@ function processFile(file) {
 
       <div v-if="store.isProcessing" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm transition-colors duration-300">
         <div class="w-8 h-8 border-4 border-brand-teal border-t-transparent rounded-full animate-spin mb-4"></div>
-        <span class="font-mono text-sm animate-pulse text-brand-dark dark:text-white">UPLOADING...</span>
+        <span class="font-mono text-sm animate-pulse text-brand-dark dark:text-white">
+          {{ store.progress > 0 ? `GENERATING 3D... ${store.progress}%` : 'UPLOADING...' }}
+        </span>
+        <div v-if="store.progress > 0" class="w-48 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden mt-3">
+          <div class="h-full bg-brand-teal transition-all duration-300" :style="{ width: store.progress + '%' }"></div>
+        </div>
       </div>
 
       <div class="flex flex-col items-center gap-4 group-hover:scale-105 transition-transform duration-300">

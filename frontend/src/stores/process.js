@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8077';
 
 export const useProcessStore = defineStore('process', () => {
   // --- State ---
-  const steps = ['Upload', 'Review', 'Preview', 'Export'];
+  const steps = ['Upload', 'Preview', 'Export'];
   const currentStepIndex = ref(0);
   const isProcessing = ref(false);
   const progress = ref(0);
@@ -13,7 +13,6 @@ export const useProcessStore = defineStore('process', () => {
   const uploadedImage = ref(null);
 
   const jobId = ref(null);
-  const multiAngleImages = ref([]);
   const modelUrl = ref(null);
   const modelScene = shallowRef(null);
   const analysisData = ref(null);
@@ -42,10 +41,11 @@ export const useProcessStore = defineStore('process', () => {
 
   // --- Actions ---
 
-  // 1. Upload
+  // 1. Upload + Generate 3D
   async function uploadImage(file, options = {}) {
     isProcessing.value = true;
     error.value = null;
+    progress.value = 0;
 
     try {
       uploadedImage.value = URL.createObjectURL(file);
@@ -64,50 +64,7 @@ export const useProcessStore = defineStore('process', () => {
       const data = await res.json();
       jobId.value = data.job_id;
 
-      isProcessing.value = false;
-      currentStepIndex.value = 1;
-    } catch (e) {
-      error.value = e.message;
-      isProcessing.value = false;
-    }
-  }
-
-  // 2. Generate Multi-Angle
-  async function generateMultiAngle() {
-    if (!jobId.value) return;
-    isProcessing.value = true;
-    progress.value = 0;
-    error.value = null;
-
-    try {
-      await fetch(`${API_BASE}/api/jobs/${jobId.value}/generate-multiangle`, {
-        method: 'POST',
-      });
-
-      await pollUntilDone(jobId.value);
-
-      // Fetch the 4 view images
-      multiAngleImages.value = [0, 1, 2, 3].map(
-        i => `${API_BASE}/api/jobs/${jobId.value}/result/view_${i}.png`
-      );
-
-      isProcessing.value = false;
-      progress.value = 0;
-    } catch (e) {
-      error.value = e.message;
-      isProcessing.value = false;
-      progress.value = 0;
-    }
-  }
-
-  // 3. Generate 3D Mesh
-  async function generateMesh() {
-    if (!jobId.value) return;
-    isProcessing.value = true;
-    progress.value = 0;
-    error.value = null;
-
-    try {
+      // Trigger 3D generation immediately
       await fetch(`${API_BASE}/api/jobs/${jobId.value}/generate-3d`, {
         method: 'POST',
       });
@@ -124,7 +81,7 @@ export const useProcessStore = defineStore('process', () => {
 
       isProcessing.value = false;
       progress.value = 0;
-      currentStepIndex.value = 2;
+      currentStepIndex.value = 1; // Go to Preview
     } catch (e) {
       error.value = e.message;
       isProcessing.value = false;
@@ -132,16 +89,15 @@ export const useProcessStore = defineStore('process', () => {
     }
   }
 
-  // 4. Confirm & Export
+  // 2. Confirm & Export
   function confirmModel() {
-    currentStepIndex.value = 3;
+    currentStepIndex.value = 2;
   }
 
   function reset() {
     currentStepIndex.value = 0;
     jobId.value = null;
     uploadedImage.value = null;
-    multiAngleImages.value = [];
     modelUrl.value = null;
     modelScene.value = null;
     analysisData.value = null;
@@ -159,14 +115,11 @@ export const useProcessStore = defineStore('process', () => {
     error,
     uploadedImage,
     jobId,
-    multiAngleImages,
     modelUrl,
     modelScene,
     analysisData,
     userScale,
     uploadImage,
-    generateMultiAngle,
-    generateMesh,
     confirmModel,
     reset,
   };

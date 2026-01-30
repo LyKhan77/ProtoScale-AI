@@ -9,7 +9,7 @@ from app.config import UPLOADS_DIR, OUTPUTS_DIR
 from app.models.schemas import JobCreatedResponse, JobStatusResponse, JobStatus
 from app.workers.task_queue import create_job, get_job, update_job, run_in_thread
 from app.services.image_processor import remove_background
-from app.services.hunyuan import generate_multiview, generate_3d
+from app.services.hunyuan import generate_3d
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["jobs"])
@@ -54,28 +54,6 @@ async def upload_image(
     return JobCreatedResponse(job_id=job_id)
 
 
-@router.post("/jobs/{job_id}/generate-multiangle", response_model=JobStatusResponse)
-async def trigger_multiangle(job_id: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(404, "Job not found")
-
-    update_job(job_id, status="processing", stage="multiview", progress=0)
-
-    async def _run():
-        try:
-            await run_in_thread(generate_multiview, job_id, job["image_path"])
-            update_job(job_id, status="completed", stage="multiview")
-        except Exception as e:
-            logger.error(f"Multi-angle generation failed for {job_id}: {e}")
-            update_job(job_id, status="failed", error=str(e))
-
-    import asyncio
-    asyncio.create_task(_run())
-
-    return _job_status(job_id)
-
-
 @router.post("/jobs/{job_id}/generate-3d", response_model=JobStatusResponse)
 async def trigger_3d(job_id: str):
     job = get_job(job_id)
@@ -117,14 +95,6 @@ async def job_result(job_id: str, asset: str):
         if not model_path or not Path(model_path).exists():
             raise HTTPException(404, "Model not ready")
         return FileResponse(model_path, media_type="model/gltf-binary", filename="model.glb")
-
-    # Multi-angle views: view_0.png, view_1.png, etc.
-    if asset.startswith("view_") and asset.endswith(".png"):
-        idx = int(asset.replace("view_", "").replace(".png", ""))
-        paths = job.get("multi_angle_paths", [])
-        if idx >= len(paths) or not Path(paths[idx]).exists():
-            raise HTTPException(404, "View not ready")
-        return FileResponse(paths[idx], media_type="image/png")
 
     raise HTTPException(400, f"Unknown asset: {asset}")
 
