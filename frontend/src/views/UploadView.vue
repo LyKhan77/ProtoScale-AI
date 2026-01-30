@@ -1,9 +1,15 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useProcessStore } from '../stores/process';
+import { useHistoryStore } from '../stores/history';
 import CyberCheckbox from '../components/CyberCheckbox.vue';
 
 const store = useProcessStore();
+const historyStore = useHistoryStore();
+
+onMounted(() => {
+  historyStore.loadHistory();
+});
 const isDragging = ref(false);
 const fileInput = ref(null);
 const removeBackground = ref(true);
@@ -130,5 +136,31 @@ function reupload() {
         </button>
       </div>
     </template>
+
+    <!-- Recent Models History -->
+    <div v-if="!store.uploadedImage && historyStore.items.length > 0" class="w-full max-w-2xl mt-12">
+      <h2 class="font-display text-xl font-bold mb-4 text-brand-dark dark:text-white transition-colors duration-300">Recent Models</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div
+          v-for="item in historyStore.items"
+          :key="item.jobId"
+          @click="store.loadFromHistory(item.jobId)"
+          class="group cursor-pointer rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden hover:border-brand-teal dark:hover:border-brand-teal transition-all duration-200 hover:shadow-lg hover:shadow-teal-500/10"
+        >
+          <div class="aspect-square bg-gray-50 dark:bg-gray-900 overflow-hidden">
+            <img
+              :src="item.thumbnailUrl"
+              :alt="item.name"
+              class="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-200"
+              loading="lazy"
+            />
+          </div>
+          <div class="p-3">
+            <p class="text-sm font-medium text-brand-dark dark:text-white truncate">{{ item.name }}</p>
+            <p class="text-xs text-gray-400 font-mono mt-1">{{ new Date(item.createdAt).toLocaleDateString() }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

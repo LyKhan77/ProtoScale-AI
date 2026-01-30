@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed, shallowRef } from 'vue';
+import { useHistoryStore } from './history';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8077';
 
@@ -95,6 +96,9 @@ export const useProcessStore = defineStore('process', () => {
       isProcessing.value = false;
       progress.value = 0;
       currentStepIndex.value = 2; // Go to Preview
+
+      const historyStore = useHistoryStore();
+      historyStore.saveToHistory(jobId.value);
     } catch (e) {
       error.value = e.message;
       isProcessing.value = false;
@@ -110,6 +114,16 @@ export const useProcessStore = defineStore('process', () => {
   // 3. Confirm & Export
   function confirmModel() {
     currentStepIndex.value = 3;
+  }
+
+  function loadFromHistory(historyJobId) {
+    jobId.value = historyJobId;
+    modelUrl.value = `${API_BASE}/api/jobs/${historyJobId}/result/model.glb`;
+    uploadedImage.value = `${API_BASE}/api/jobs/${historyJobId}/thumbnail`;
+    analysisData.value = { watertight: true, dimensions: { x: 0, y: 0, z: 0 }, volume: 0 };
+    error.value = null;
+    isProcessing.value = false;
+    currentStepIndex.value = 2;
   }
 
   function reset() {
@@ -141,6 +155,7 @@ export const useProcessStore = defineStore('process', () => {
     generate3D,
     goToGenerate,
     confirmModel,
+    loadFromHistory,
     reset,
   };
 });

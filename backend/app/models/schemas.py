@@ -27,6 +27,12 @@ class JobStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
+class JobListItem(BaseModel):
+    job_id: str
+    has_model: bool
+    created_at: str
+
+
 class AnalysisData(BaseModel):
     watertight: bool = True
     dimensions: dict = {"x": 0, "y": 0, "z": 0}
