@@ -78,11 +78,15 @@ docker-compose up -d
 
 ## Processing Pipeline
 
-1. **Multi-angle Generation** (GPU) - Uses Qwen Image Edit with LoRA
-2. **Preprocessing** (CPU) - Background removal with rembg
-3. **3D Reconstruction** (GPU) - TripoSR from Stability AI
+**TripoSR-Only Pipeline (5 stages):**
+
+1. **Preprocessing** (GPU) - Background removal with rembg
+2. **3D Reconstruction** (GPU) - TripoSR single-image reconstruction
+3. **Render Previews** (CPU) - Multi-angle preview generation (0°, 90°, 180°, 270°)
 4. **Mesh Repair** (CPU) - Trimesh validation and repair
-5. **Export** (CPU) - STL/OBJ conversion
+5. **Export** (CPU) - STL/OBJ conversion with scaling support
+
+**Total processing time:** 5-10 seconds per job
 
 ## Configuration
 

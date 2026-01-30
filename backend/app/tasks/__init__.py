@@ -13,6 +13,7 @@ celery_app = Celery(
         "app.tasks.pipeline",
         "app.tasks.preprocessing",
         "app.tasks.reconstruction",
+        "app.tasks.triposr_pipeline",
         "app.tasks.mesh_repair",
         "app.tasks.export",
     ]
@@ -31,6 +32,7 @@ celery_app.conf.update(
     task_routes={
         "app.tasks.preprocessing.*": {"queue": "gpu"},
         "app.tasks.reconstruction.*": {"queue": "gpu"},
+        "app.tasks.triposr_pipeline.*": {"queue": "cpu"},
         "app.tasks.mesh_repair.*": {"queue": "cpu"},
         "app.tasks.export.*": {"queue": "cpu"},
         "app.tasks.pipeline.*": {"queue": "cpu"},
