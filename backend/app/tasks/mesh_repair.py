@@ -8,7 +8,7 @@ logger = get_logger(__name__)
 
 
 @celery_app.task(name="app.tasks.mesh_repair.repair_mesh", bind=True)
-def repair_mesh(self, mesh_path: str, job_id: str):
+def repair_mesh(self, previous_result, job_id: str):
     """Repair mesh for FDM 3D printing.
 
     Performs validation and repair operations:
@@ -19,7 +19,7 @@ def repair_mesh(self, mesh_path: str, job_id: str):
     - Fill holes
 
     Args:
-        mesh_path: Path to raw mesh file
+        previous_result: Result from previous task (ignored, we get mesh_path from job)
         job_id: Job identifier
 
     Returns:
@@ -31,6 +31,14 @@ def repair_mesh(self, mesh_path: str, job_id: str):
     try:
         # Update status
         job_service.update_status(job_id, JobStatus.MESH_REPAIRING, 60)
+
+        # Get mesh path from job data (not from previous_result)
+        # because render_previews returns list of preview images
+        job = job_service.get_job(job_id)
+        mesh_path = job.get('mesh_path')
+        
+        if not mesh_path:
+            raise FileNotFoundError(f"Mesh path not found in job data for job {job_id}")
 
         # Load mesh
         input_path = job_storage.get_path(f"{job_id}/{mesh_path}")

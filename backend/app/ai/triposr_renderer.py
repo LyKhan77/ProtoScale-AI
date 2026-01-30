@@ -55,12 +55,6 @@ def render_multi_angle_previews(
             # Calculate camera position for this angle
             rad = np.deg2rad(angle)
 
-            camera_position = [
-                radius * np.sin(rad),  # X
-                0,                      # Y (eye level)
-                radius * np.cos(rad)   # Z
-            ]
-
             # Set camera
             scene.set_camera(
                 angles=[rad, 0, 0],
@@ -68,13 +62,12 @@ def render_multi_angle_previews(
                 center=scene.centroid
             )
 
-            # Render scene
-            buffer = io.BytesIO()
-            scene.save_image(buffer, resolution=image_size)
-            buffer.seek(0)
+            # Render scene to PNG buffer
+            # trimesh.Scene.save_image() returns a PNG bytes directly
+            png_data = scene.save_image(resolution=image_size)
 
             # Convert to PIL Image
-            img = Image.open(buffer)
+            img = Image.open(io.BytesIO(png_data))
             preview_images.append(img)
 
             logger.info(f"Rendered angle {angle}°")

@@ -40,10 +40,13 @@ def start_pipeline(self, job_id: str):
     # Create task chain
     # First task uses si() (immutable) since it has no previous result
     # Subsequent tasks use s(job_id) and receive previous result as first arg
+    # Note: render_previews is a side-effect task that doesn't affect the chain
     pipeline = chain(
         preprocess_image.si(job_id),
         reconstruct_3d.s(job_id),
         render_previews.s(job_id),
+        # Get mesh path from job data for repair (render_previews returns list of images)
+        # The chain passes render_previews result, but we'll retrieve mesh_path from job
         repair_mesh.s(job_id),
         export_mesh.s(job_id),
     )
