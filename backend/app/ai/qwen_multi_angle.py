@@ -43,10 +43,13 @@ def load_pipeline():
     try:
         from diffusers import QwenImageEditPlusPipeline
 
-        # Load base model on CPU first, then use offloading
+        # Load base model with low CPU memory usage to prevent OOM
+        # This loads model incrementally instead of all at once
         _pipeline = QwenImageEditPlusPipeline.from_pretrained(
             "Qwen/Qwen-Image-Edit-2511",
             torch_dtype=dtype,
+            low_cpu_mem_usage=True,
+            device_map=None,  # We'll handle device placement manually with offload
         )
 
         # Use sequential CPU offload - moves individual layers to GPU one at a time
