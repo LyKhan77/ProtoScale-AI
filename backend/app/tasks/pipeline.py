@@ -15,14 +15,16 @@ def start_pipeline(self, job_id: str):
     Pipeline stages:
     1. Preprocessing / Background removal (CPU)
     2. 3D Reconstruction (GPU)
-    3. Mesh repair (CPU)
-    4. Export to STL/OBJ (CPU)
+    3. Render Multi-Angle Previews (CPU)
+    4. Mesh repair (CPU)
+    5. Export to STL/OBJ (CPU)
 
     Args:
         job_id: Job identifier
     """
     from app.tasks.preprocessing import preprocess_image
     from app.tasks.reconstruction import reconstruct_3d
+    from app.tasks.triposr_pipeline import render_previews
     from app.tasks.mesh_repair import repair_mesh
     from app.tasks.export import export_mesh
 
@@ -33,7 +35,7 @@ def start_pipeline(self, job_id: str):
         logger.error(f"Job {job_id} not found")
         return {"error": "Job not found"}
 
-    logger.info(f"Starting pipeline for job {job_id}")
+    logger.info(f"Starting TripoSR-only pipeline for job {job_id}")
 
     # Create task chain
     # First task uses si() (immutable) since it has no previous result
@@ -41,6 +43,7 @@ def start_pipeline(self, job_id: str):
     pipeline = chain(
         preprocess_image.si(job_id),
         reconstruct_3d.s(job_id),
+        render_previews.s(job_id),
         repair_mesh.s(job_id),
         export_mesh.s(job_id),
     )

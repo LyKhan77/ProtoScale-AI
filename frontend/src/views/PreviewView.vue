@@ -82,6 +82,21 @@ function setDimZ(val) {
     if (lockUniform.value) { uniformScale.value = scaleZ.value; scaleX.value = scaleZ.value; scaleY.value = scaleZ.value; }
   }
 }
+
+// Export scaled STL
+async function handleExport() {
+  try {
+    const scale = {
+      x: scaleX.value,
+      y: scaleY.value,
+      z: scaleZ.value
+    };
+    await store.exportScaledStl(scale);
+  } catch (err) {
+    alert('Export failed: ' + err.message);
+  }
+}
+
 </script>
 
 <template>
@@ -290,7 +305,7 @@ function setDimZ(val) {
     <!-- Bottom Action Bar -->
     <div v-if="!store.isProcessing && !store.error" class="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
       <button
-        @click="store.confirmModel"
+        @click="handleExport"
         class="bg-brand-teal text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 hover:scale-105 transition-all"
       >
         Export Scaled STL

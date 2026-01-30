@@ -47,13 +47,19 @@ def reconstruct_3d(self, preprocessed_path: str, job_id: str):
         mesh = reconstruct_mesh(input_image)
         job_service.update_progress(job_id, 55)
 
+        # Extract mesh dimensions
+        from app.ai.triposr_renderer import get_mesh_dimensions
+        mesh_dimensions = get_mesh_dimensions(mesh)
+        logger.info(f"Mesh dimensions: {mesh_dimensions['dimensions']}")
+
         # Save mesh as PLY (intermediate format)
         mesh_filename = "raw_mesh.ply"
         save_path = job_storage.get_path(f"{job_id}/{mesh_filename}")
         mesh.export(save_path)
 
-        # Update job
+        # Update job with mesh path and dimensions
         job_service.set_mesh_path(job_id, mesh_filename)
+        job_service.set_job_data(job_id, {"mesh_dimensions": mesh_dimensions})
         job_service.update_progress(job_id, 60)
 
         logger.info(f"3D mesh saved to {save_path}")

@@ -17,6 +17,7 @@ class JobStatus(str, Enum):
     UPLOADED = "uploaded"
     PREPROCESSING = "preprocessing"
     RECONSTRUCTING_3D = "reconstructing_3d"
+    RENDERING_PREVIEWS = "rendering_previews"
     MESH_REPAIRING = "mesh_repairing"
     EXPORTING_STL = "exporting_stl"
     DONE = "done"
@@ -206,6 +207,30 @@ class JobService:
             Updated job data or None if not found
         """
         return self.update_job(job_id, {"mesh_path": mesh_path})
+
+    def set_multi_angle_images(self, job_id: str, image_paths: list) -> Optional[dict]:
+        """Set multi-angle preview image paths.
+
+        Args:
+            job_id: Job identifier
+            image_paths: List of preview image filenames
+
+        Returns:
+            Updated job data or None if not found
+        """
+        return self.update_job(job_id, {"multi_angle_images": image_paths})
+
+    def set_job_data(self, job_id: str, data: dict) -> Optional[dict]:
+        """Set arbitrary job data.
+
+        Args:
+            job_id: Job identifier
+            data: Dictionary of data to merge into job
+
+        Returns:
+            Updated job data or None if not found
+        """
+        return self.update_job(job_id, data)
 
 
 # Singleton instance

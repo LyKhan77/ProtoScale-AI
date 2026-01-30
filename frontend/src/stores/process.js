@@ -193,6 +193,50 @@ export const useProcessStore = defineStore('process', () => {
     }
   }
 
+  // Export scaled STL
+  async function exportScaledStl(scale) {
+    if (!jobId.value) {
+      throw new Error('No job ID available');
+    }
+
+    try {
+      const response = await fetchApi(`/dimension/update/${jobId.value}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scale })
+      });
+
+      // Open download URL in new tab
+      const downloadUrl = `${API_BASE_URL.replace('/api', '')}${response.download_url}`;
+      window.open(downloadUrl, '_blank');
+
+      return response;
+    } catch (err) {
+      console.error('Export scaled STL failed:', err);
+      throw err;
+    }
+  }
+
+  // Validate dimensions
+  async function validateDimensions(dimensions) {
+    if (!jobId.value) {
+      throw new Error('No job ID available');
+    }
+
+    try {
+      const response = await fetchApi(`/dimension/validate/${jobId.value}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dimensions })
+      });
+
+      return response;
+    } catch (err) {
+      console.error('Validate dimensions failed:', err);
+      throw err;
+    }
+  }
+
   function reset() {
     currentStepIndex.value = 0;
     uploadedImage.value = null;
@@ -227,6 +271,8 @@ export const useProcessStore = defineStore('process', () => {
     confirmModel,
     downloadStl,
     downloadObj,
+    exportScaledStl,
+    validateDimensions,
     reset
   };
 });

@@ -37,6 +37,12 @@ class Config:
     MIN_WALL_THICKNESS_MM = 1.2
     MESH_RESOLUTION = 256
 
+    # ProtoScale-specific settings
+    ENABLE_SCALING = True
+    DEFAULT_SCALE = 1.0
+    MIN_SCALE = 0.5
+    MAX_SCALE = 5.0
+
 
 class DevelopmentConfig(Config):
     """Development configuration."""

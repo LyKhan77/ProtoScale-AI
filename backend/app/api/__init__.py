@@ -12,6 +12,7 @@ def register_blueprints(app):
     from app.api.download import download_bp
     from app.api.health import health_bp
     from app.api.files import files_bp
+    from app.api.dimension import dimension_bp
 
     api_bp.register_blueprint(upload_bp)
     api_bp.register_blueprint(job_bp)
@@ -19,5 +20,6 @@ def register_blueprints(app):
     api_bp.register_blueprint(download_bp)
     api_bp.register_blueprint(health_bp)
     api_bp.register_blueprint(files_bp)
+    api_bp.register_blueprint(dimension_bp)
 
     app.register_blueprint(api_bp)
