@@ -3,6 +3,7 @@
 Uses TripoSR from Stability AI for single-image 3D reconstruction.
 Reference: https://github.com/VAST-AI-Research/TripoSR
 """
+import numpy as np
 import torch
 from PIL import Image
 import trimesh
@@ -16,6 +17,12 @@ logger = get_logger(__name__)
 # Global model singleton
 _model = None
 
+# Default chunk size for surface extraction (from official run.py)
+DEFAULT_CHUNK_SIZE = 8192
+
+# Default foreground ratio (from official run.py)
+DEFAULT_FOREGROUND_RATIO = 0.85
+
 
 def get_device():
     """Get the appropriate device for inference."""
@@ -28,7 +35,12 @@ def get_device():
 
 
 def load_model():
-    """Load the TripoSR model."""
+    """Load the TripoSR model.
+
+    Follows official initialization from run.py:
+        model = TSR.from_pretrained(...)
+        model.renderer.set_chunk_size(chunk_size)
+    """
     global _model
 
     if _model is not None:
@@ -36,7 +48,6 @@ def load_model():
 
     logger.info("Loading TripoSR model...")
 
-    device = get_device()
     config = get_config()
 
     try:
@@ -44,14 +55,17 @@ def load_model():
 
         logger.info(f"Loading TripoSR from {config.TRIPOSR_MODEL_ID}...")
 
-        # Load on CPU first - will move to GPU only during inference
         _model = TSR.from_pretrained(
             config.TRIPOSR_MODEL_ID,
             config_name="config.yaml",
             weight_name="model.ckpt",
-        ).cpu()
+        )
 
-        # Set to eval mode
+        # Set chunk size for surface extraction (official default: 8192)
+        _model.renderer.set_chunk_size(DEFAULT_CHUNK_SIZE)
+
+        # Keep on CPU, move to GPU only during inference
+        _model.cpu()
         _model.eval()
 
         logger.info("TripoSR model loaded on CPU (will move to GPU for inference)")
@@ -68,28 +82,54 @@ def load_model():
     return _model
 
 
-def preprocess_image(image: Image.Image) -> Image.Image:
-    """Preprocess image for TripoSR.
+def preprocess_image(image: Image.Image, foreground_ratio: float = DEFAULT_FOREGROUND_RATIO) -> Image.Image:
+    """Preprocess image for TripoSR following official run.py pipeline.
+
+    Official pipeline:
+        1. remove_background (via tsr.utils)
+        2. resize_foreground to ratio 0.85
+        3. Composite on gray (0.5) background
+        4. Convert to uint8 PIL Image
+
+    Since background removal is already done in our preprocessing step,
+    we use resize_foreground + gray background compositing here.
 
     Args:
-        image: Input PIL image
+        image: Input PIL image (RGBA with background removed, or RGB)
+        foreground_ratio: Ratio of foreground to image size (default 0.85)
 
     Returns:
-        Preprocessed PIL image
+        Preprocessed PIL image ready for TripoSR inference
     """
-    # Ensure RGB
+    try:
+        from tsr.utils import resize_foreground
+    except ImportError:
+        # Fallback if tsr.utils not available
+        logger.warning("tsr.utils not available, using basic preprocessing")
+        return _basic_preprocess(image)
+
+    # If image is RGBA (background already removed), use resize_foreground
     if image.mode == "RGBA":
-        # Create white background
-        background = Image.new("RGB", image.size, (255, 255, 255))
-        background.paste(image, mask=image.split()[3])
-        image = background
+        image = resize_foreground(image, foreground_ratio)
+        # Composite on gray background (matching official run.py)
+        image = np.array(image).astype(np.float32) / 255.0
+        image = image[:, :, :3] * image[:, :, 3:4] + (1 - image[:, :, 3:4]) * 0.5
+        image = Image.fromarray((image * 255.0).astype(np.uint8))
     elif image.mode != "RGB":
         image = image.convert("RGB")
 
-    # Resize to 256x256 (TripoSR expected size)
-    if image.size != (256, 256):
-        image = image.resize((256, 256), Image.Resampling.LANCZOS)
+    return image
 
+
+def _basic_preprocess(image: Image.Image) -> Image.Image:
+    """Basic fallback preprocessing when tsr.utils is not available."""
+    if image.mode == "RGBA":
+        # Composite on gray background
+        arr = np.array(image).astype(np.float32) / 255.0
+        rgb = arr[:, :, :3] * arr[:, :, 3:4] + (1 - arr[:, :, 3:4]) * 0.5
+        image = Image.fromarray((rgb * 255.0).astype(np.uint8))
+    elif image.mode != "RGB":
+        image = image.convert("RGB")
     return image
 
 
@@ -109,9 +149,13 @@ def reconstruct_mesh(
 ) -> trimesh.Trimesh:
     """Reconstruct 3D mesh from a single image.
 
+    Follows official run.py inference flow:
+        scene_codes = model([image], device=device)
+        meshes = model.extract_mesh(scene_codes, has_vertex_color, resolution=resolution)
+
     Args:
         image: Input PIL image (preferably with background removed)
-        resolution: Mesh extraction resolution (default from config)
+        resolution: Marching cubes grid resolution (default from config)
 
     Returns:
         Trimesh object
@@ -129,7 +173,7 @@ def reconstruct_mesh(
 
     logger.info(f"Reconstructing 3D mesh at resolution {resolution}")
 
-    # Preprocess image
+    # Preprocess image (resize_foreground + gray bg compositing)
     processed_image = preprocess_image(image)
 
     try:
@@ -138,11 +182,12 @@ def reconstruct_mesh(
         model.to(device)
 
         with torch.no_grad():
-            # Run inference
+            # Run inference (official: model([image], device=device))
             scene_codes = model([processed_image], device=device)
 
-            # Extract mesh
-            meshes = model.extract_mesh(scene_codes, resolution=resolution, has_vertex_color=False)
+            # Extract mesh (official: model.extract_mesh(scene_codes, True, resolution=mc_resolution))
+            # First positional bool = has_vertex_color (True when not baking texture)
+            meshes = model.extract_mesh(scene_codes, True, resolution=resolution)
 
             if len(meshes) == 0:
                 raise ValueError("No mesh generated")

@@ -1,4 +1,8 @@
-"""Background removal using rembg."""
+"""Background removal using rembg.
+
+Runs on GPU (CUDA) when available for faster inference.
+RTX 4090: U2Net uses ~200MB VRAM.
+"""
 from PIL import Image
 import io
 
@@ -11,7 +15,7 @@ _session = None
 
 
 def get_session():
-    """Get or create rembg session."""
+    """Get or create rembg session with GPU acceleration."""
     global _session
 
     if _session is not None:
@@ -19,14 +23,32 @@ def get_session():
 
     try:
         from rembg import new_session
+        import onnxruntime as ort
 
-        # Use u2net model (good balance of quality and speed)
-        _session = new_session("u2net")
+        # Use CUDA if available (RTX 4090), otherwise CPU
+        available_providers = ort.get_available_providers()
+        if "CUDAExecutionProvider" in available_providers:
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            logger.info("rembg: Using CUDA GPU acceleration")
+        else:
+            providers = ["CPUExecutionProvider"]
+            logger.info("rembg: CUDA not available, using CPU")
+
+        _session = new_session("u2net", providers=providers)
         logger.info("Background removal session created")
 
     except ImportError:
         logger.warning("rembg not installed, background removal will be skipped")
         _session = "fallback"
+
+    except Exception as e:
+        logger.warning(f"GPU session failed ({e}), falling back to CPU")
+        try:
+            from rembg import new_session
+            _session = new_session("u2net")
+            logger.info("Background removal session created (CPU fallback)")
+        except Exception:
+            _session = "fallback"
 
     return _session
 

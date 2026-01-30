@@ -25,7 +25,7 @@ def reconstruct_3d(self, preprocessed_path: str, job_id: str):
 
     try:
         # Update status
-        job_service.update_status(job_id, JobStatus.RECONSTRUCTING_3D, 50)
+        job_service.update_status(job_id, JobStatus.RECONSTRUCTING_3D, 20)
 
         # Load preprocessed image
         image_path = job_storage.get_path(f"{job_id}/{preprocessed_path}")
@@ -41,11 +41,11 @@ def reconstruct_3d(self, preprocessed_path: str, job_id: str):
 
         # Load image
         input_image = Image.open(image_path)
-        job_service.update_progress(job_id, 55)
+        job_service.update_progress(job_id, 35)
 
         # Reconstruct 3D mesh
         mesh = reconstruct_mesh(input_image)
-        job_service.update_progress(job_id, 65)
+        job_service.update_progress(job_id, 55)
 
         # Save mesh as PLY (intermediate format)
         mesh_filename = "raw_mesh.ply"
@@ -54,7 +54,7 @@ def reconstruct_3d(self, preprocessed_path: str, job_id: str):
 
         # Update job
         job_service.set_mesh_path(job_id, mesh_filename)
-        job_service.update_progress(job_id, 70)
+        job_service.update_progress(job_id, 60)
 
         logger.info(f"3D mesh saved to {save_path}")
 

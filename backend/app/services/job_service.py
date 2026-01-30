@@ -15,7 +15,6 @@ logger = get_logger(__name__)
 class JobStatus(str, Enum):
     """Job status enumeration."""
     UPLOADED = "uploaded"
-    GENERATING_MULTI_ANGLES = "generating_multi_angles"
     PREPROCESSING = "preprocessing"
     RECONSTRUCTING_3D = "reconstructing_3d"
     MESH_REPAIRING = "mesh_repairing"
@@ -56,7 +55,6 @@ class JobService:
             "updated_at": datetime.utcnow().isoformat(),
             "error_message": None,
             "error_stage": None,
-            "multi_angle_images": [],
             "preprocessed_image": None,
             "mesh_path": None,
             "stl_path": None,
@@ -184,18 +182,6 @@ class JobService:
             "obj_path": obj_path,
             "analysis_data": analysis_data,
         })
-
-    def set_multi_angle_images(self, job_id: str, image_paths: list) -> Optional[dict]:
-        """Set multi-angle image paths.
-
-        Args:
-            job_id: Job identifier
-            image_paths: List of image paths
-
-        Returns:
-            Updated job data or None if not found
-        """
-        return self.update_job(job_id, {"multi_angle_images": image_paths})
 
     def set_preprocessed_image(self, job_id: str, image_path: str) -> Optional[dict]:
         """Set preprocessed image path.

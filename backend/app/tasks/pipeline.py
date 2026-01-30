@@ -13,16 +13,14 @@ def start_pipeline(self, job_id: str):
     """Start the complete processing pipeline for a job.
 
     Pipeline stages:
-    1. Multi-angle generation (GPU)
-    2. Preprocessing / Background removal (CPU)
-    3. 3D Reconstruction (GPU)
-    4. Mesh repair (CPU)
-    5. Export to STL/OBJ (CPU)
+    1. Preprocessing / Background removal (CPU)
+    2. 3D Reconstruction (GPU)
+    3. Mesh repair (CPU)
+    4. Export to STL/OBJ (CPU)
 
     Args:
         job_id: Job identifier
     """
-    from app.tasks.multi_angle import generate_multi_angles
     from app.tasks.preprocessing import preprocess_image
     from app.tasks.reconstruction import reconstruct_3d
     from app.tasks.mesh_repair import repair_mesh
@@ -41,8 +39,7 @@ def start_pipeline(self, job_id: str):
     # First task uses si() (immutable) since it has no previous result
     # Subsequent tasks use s(job_id) and receive previous result as first arg
     pipeline = chain(
-        generate_multi_angles.si(job_id),
-        preprocess_image.s(job_id),
+        preprocess_image.si(job_id),
         reconstruct_3d.s(job_id),
         repair_mesh.s(job_id),
         export_mesh.s(job_id),

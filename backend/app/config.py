@@ -31,7 +31,6 @@ class Config:
     GPU_DEVICE = os.getenv("GPU_DEVICE", "cuda" if os.getenv("CUDA_VISIBLE_DEVICES") else "cpu")
 
     # AI Model settings
-    QWEN_MODEL_ID = "Qwen/Qwen-Image-Edit-2511"
     TRIPOSR_MODEL_ID = "stabilityai/TripoSR"
 
     # Mesh settings

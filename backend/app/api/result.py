@@ -17,7 +17,7 @@ def get_result(job_id: str):
         job_id: Job identifier
 
     Returns:
-        JSON with multi_angle_images, preview_obj, stl_download_url, analysis_data
+        JSON with preview_obj, stl_download_url, analysis_data, mesh_dimensions
     """
     result_service = get_result_service()
 

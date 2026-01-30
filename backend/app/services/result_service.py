@@ -45,13 +45,6 @@ class ResultService:
             result["error_message"] = job.get("error_message")
             result["error_stage"] = job.get("error_stage")
 
-        # Add multi-angle images if available
-        if job.get("multi_angle_images"):
-            result["multi_angle_images"] = [
-                f"/api/files/jobs/{job_id}/{img}"
-                for img in job["multi_angle_images"]
-            ]
-
         # Add preprocessed image if available
         if job.get("preprocessed_image"):
             result["preprocessed_image"] = f"/api/files/jobs/{job_id}/{job['preprocessed_image']}"
@@ -70,6 +63,16 @@ class ResultService:
         # Add analysis data if available
         if job.get("analysis_data"):
             result["analysis_data"] = job["analysis_data"]
+            # Extract mesh dimensions for frontend scaling tools
+            dims = job["analysis_data"].get("dimensions", {})
+            result["mesh_dimensions"] = {
+                "x_mm": dims.get("x", 0),
+                "y_mm": dims.get("y", 0),
+                "z_mm": dims.get("z", 0),
+                "volume_mm3": job["analysis_data"].get("volume", 0),
+                "watertight": job["analysis_data"].get("watertight", False),
+                "manifold": job["analysis_data"].get("manifold", False),
+            }
 
         return result
 

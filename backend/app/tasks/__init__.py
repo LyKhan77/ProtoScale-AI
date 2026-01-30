@@ -11,7 +11,6 @@ celery_app = Celery(
     backend=config.CELERY_RESULT_BACKEND,
     include=[
         "app.tasks.pipeline",
-        "app.tasks.multi_angle",
         "app.tasks.preprocessing",
         "app.tasks.reconstruction",
         "app.tasks.mesh_repair",
@@ -21,17 +20,24 @@ celery_app = Celery(
 
 # Celery configuration
 celery_app.conf.update(
-    # Task routing - GPU tasks to gpu queue, CPU tasks to cpu queue
+    # Task routing
+    # GPU queue: AI inference tasks (rembg U2Net + TripoSR)
+    # CPU queue: pure numpy/trimesh operations (no GPU benefit)
+    #
+    # RTX 4090 24GB budget:
+    #   rembg U2Net:  ~200MB VRAM
+    #   TripoSR:      ~6GB VRAM
+    #   Peak total:   ~6.2GB / 24GB (26%)
     task_routes={
-        "app.tasks.multi_angle.*": {"queue": "gpu"},
+        "app.tasks.preprocessing.*": {"queue": "gpu"},
         "app.tasks.reconstruction.*": {"queue": "gpu"},
-        "app.tasks.preprocessing.*": {"queue": "cpu"},
         "app.tasks.mesh_repair.*": {"queue": "cpu"},
         "app.tasks.export.*": {"queue": "cpu"},
         "app.tasks.pipeline.*": {"queue": "cpu"},
     },
 
-    # Prevent GPU tasks from being prefetched
+    # GPU worker: concurrency=1 to avoid VRAM contention
+    # (TripoSR singleton model moves to/from GPU per job)
     worker_prefetch_multiplier=1,
 
     # Task serialization
@@ -47,9 +53,9 @@ celery_app.conf.update(
     result_expires=86400,  # 24 hours
 
     # Redis broker visibility timeout - must be longer than longest task
-    # Multi-angle generation can take ~60-90 min with sequential CPU offload
+    # TripoSR pipeline: ~5-10s per job, 10 min timeout is generous
     broker_transport_options={
-        "visibility_timeout": 7200,  # 2 hours
+        "visibility_timeout": 600,  # 10 minutes
     },
 
     # Task acknowledgement - ack early to prevent re-delivery

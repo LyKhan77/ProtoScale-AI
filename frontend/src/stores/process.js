@@ -9,7 +9,7 @@ const POLL_INTERVAL = 1000;
 
 export const useProcessStore = defineStore('process', () => {
   // --- State ---
-  const steps = ['Upload', 'Review', 'Preview', 'Export'];
+  const steps = ['Upload', 'Preview', 'Export'];
   const currentStepIndex = ref(0);
   const isProcessing = ref(false);
   const progress = ref(0);
@@ -21,9 +21,9 @@ export const useProcessStore = defineStore('process', () => {
   const jobStatus = ref(null);
 
   // Data Containers
-  const multiAngleImages = ref([]);
   const modelUrl = ref(null);
   const analysisData = ref(null);
+  const modelDimensions = ref(null);
   const stlDownloadUrl = ref(null);
   const objDownloadUrl = ref(null);
 
@@ -33,7 +33,6 @@ export const useProcessStore = defineStore('process', () => {
   const statusMessage = computed(() => {
     const statusMap = {
       'uploaded': 'Initializing...',
-      'generating_multi_angles': 'Generating multi-angle views',
       'preprocessing': 'Removing background',
       'reconstructing_3d': 'Reconstructing 3D geometry',
       'mesh_repairing': 'Repairing mesh',
@@ -86,10 +85,8 @@ export const useProcessStore = defineStore('process', () => {
       // Store local preview
       uploadedImage.value = URL.createObjectURL(file);
 
-      isProcessing.value = false;
-      currentStepIndex.value = 1; // Move to Review
-
-      // Start polling for multi-angle generation
+      // Stay on Upload view but show processing state
+      // Will navigate to Preview when done
       pollJobStatus();
 
     } catch (err) {
@@ -115,21 +112,20 @@ export const useProcessStore = defineStore('process', () => {
         return;
       }
 
-      // Check if multi-angle generation is complete
-      if (status.status === 'preprocessing' ||
-          status.status === 'reconstructing_3d' ||
-          status.status === 'mesh_repairing' ||
-          status.status === 'exporting_stl' ||
-          status.status === 'done') {
-        // Fetch result to get images
+      // Fetch result to get latest data
+      if (status.status !== 'uploaded') {
         await fetchResult();
+      }
+
+      // Navigate to Preview when done
+      if (status.status === 'done') {
+        isProcessing.value = false;
+        currentStepIndex.value = 1; // Preview
       }
 
       // Continue polling if not done
       if (status.status !== 'done' && status.status !== 'error') {
         setTimeout(pollJobStatus, POLL_INTERVAL);
-      } else if (status.status === 'done') {
-        isProcessing.value = false;
       }
 
     } catch (err) {
@@ -146,13 +142,6 @@ export const useProcessStore = defineStore('process', () => {
     try {
       const result = await fetchApi(`/result/${jobId.value}`);
 
-      // Update multi-angle images if available
-      if (result.multi_angle_images && result.multi_angle_images.length > 0) {
-        multiAngleImages.value = result.multi_angle_images.map(
-          path => `${API_BASE_URL.replace('/api', '')}${path}`
-        );
-      }
-
       // Update download URLs if available
       if (result.stl_download_url) {
         stlDownloadUrl.value = `${API_BASE_URL.replace('/api', '')}${result.stl_download_url}`;
@@ -166,6 +155,11 @@ export const useProcessStore = defineStore('process', () => {
         analysisData.value = result.analysis_data;
       }
 
+      // Update mesh dimensions if available
+      if (result.mesh_dimensions) {
+        modelDimensions.value = result.mesh_dimensions;
+      }
+
       // Update model URL for preview if available
       if (result.preview_obj) {
         modelUrl.value = `${API_BASE_URL.replace('/api', '')}${result.preview_obj}`;
@@ -176,61 +170,9 @@ export const useProcessStore = defineStore('process', () => {
     }
   }
 
-  // 2. Generate Multi-Angle (now handled by backend, this just triggers UI update)
-  async function generateMultiAngle() {
-    // Multi-angle generation starts automatically after upload
-    // This function can be used to refresh/re-poll if needed
-    isProcessing.value = true;
-    progress.value = 0;
-
-    if (jobId.value) {
-      await pollJobStatus();
-    }
-  }
-
-  // 3. Generate 3D Mesh (triggers move to preview once ready)
-  async function generateMesh() {
-    isProcessing.value = true;
-
-    // The backend pipeline already generates the mesh
-    // Poll until done
-    if (jobId.value) {
-      const checkStatus = async () => {
-        const status = await fetchApi(`/job/${jobId.value}`);
-
-        if (status.status === 'done') {
-          await fetchResult();
-          isProcessing.value = false;
-          currentStepIndex.value = 2; // Move to Preview
-        } else if (status.status === 'error') {
-          error.value = status.error_message || 'Mesh generation failed';
-          isProcessing.value = false;
-        } else {
-          progress.value = status.progress || 0;
-          setTimeout(checkStatus, POLL_INTERVAL);
-        }
-      };
-
-      await checkStatus();
-    } else {
-      // Fallback for development without backend
-      await new Promise(resolve => setTimeout(resolve, 3000));
-
-      modelUrl.value = 'placeholder-cube';
-      analysisData.value = {
-        watertight: true,
-        dimensions: { x: 45.2, y: 30.0, z: 12.5 },
-        volume: 1205.4
-      };
-
-      isProcessing.value = false;
-      currentStepIndex.value = 2;
-    }
-  }
-
-  // 4. Confirm & Export
+  // Confirm & Export
   function confirmModel() {
-    currentStepIndex.value = 3; // Move to Export
+    currentStepIndex.value = 2; // Move to Export
   }
 
   // Download STL
@@ -239,8 +181,6 @@ export const useProcessStore = defineStore('process', () => {
       window.open(stlDownloadUrl.value, '_blank');
     } else if (jobId.value) {
       window.open(`${API_BASE_URL}/download/${jobId.value}/stl`, '_blank');
-    } else {
-      alert('STL file not available yet');
     }
   }
 
@@ -250,17 +190,15 @@ export const useProcessStore = defineStore('process', () => {
       window.open(objDownloadUrl.value, '_blank');
     } else if (jobId.value) {
       window.open(`${API_BASE_URL}/download/${jobId.value}/obj`, '_blank');
-    } else {
-      alert('OBJ file not available yet');
     }
   }
 
   function reset() {
     currentStepIndex.value = 0;
     uploadedImage.value = null;
-    multiAngleImages.value = [];
     modelUrl.value = null;
     analysisData.value = null;
+    modelDimensions.value = null;
     jobId.value = null;
     jobStatus.value = null;
     progress.value = 0;
@@ -278,16 +216,14 @@ export const useProcessStore = defineStore('process', () => {
     progress,
     error,
     uploadedImage,
-    multiAngleImages,
     modelUrl,
     analysisData,
+    modelDimensions,
     jobId,
     jobStatus,
     stlDownloadUrl,
     objDownloadUrl,
     uploadImage,
-    generateMultiAngle,
-    generateMesh,
     confirmModel,
     downloadStl,
     downloadObj,

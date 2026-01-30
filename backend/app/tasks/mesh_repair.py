@@ -30,7 +30,7 @@ def repair_mesh(self, mesh_path: str, job_id: str):
 
     try:
         # Update status
-        job_service.update_status(job_id, JobStatus.MESH_REPAIRING, 75)
+        job_service.update_status(job_id, JobStatus.MESH_REPAIRING, 60)
 
         # Load mesh
         input_path = job_storage.get_path(f"{job_id}/{mesh_path}")
@@ -47,14 +47,14 @@ def repair_mesh(self, mesh_path: str, job_id: str):
 
         # Load mesh
         mesh = trimesh.load(input_path)
-        job_service.update_progress(job_id, 78)
+        job_service.update_progress(job_id, 68)
 
         # Validate mesh
         validator = MeshValidator()
         validation_result = validator.validate(mesh)
         logger.info(f"Initial validation: {validation_result}")
 
-        job_service.update_progress(job_id, 80)
+        job_service.update_progress(job_id, 75)
 
         # Repair mesh if needed
         repairer = MeshRepairer()
@@ -71,7 +71,7 @@ def repair_mesh(self, mesh_path: str, job_id: str):
         save_path = job_storage.get_path(f"{job_id}/{repaired_filename}")
         repaired_mesh.export(save_path)
 
-        job_service.update_progress(job_id, 88)
+        job_service.update_progress(job_id, 85)
 
         logger.info(f"Repaired mesh saved to {save_path}")
 
