@@ -43,67 +43,60 @@ def load_model():
 
 
 def _render_views_from_mesh(mesh, output_dir: str) -> list[str]:
-    """Render 4 views (front, right, back, left) from a trimesh mesh."""
-    import trimesh
+    """Render 4 views from a trimesh mesh using matplotlib (headless)."""
     import numpy as np
-    from PIL import Image
-    from trimesh.transformations import rotation_matrix, translation_matrix
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
     views = []
-    angles = [0, 90, 180, 270]
+    # (elevation, azimuth) pairs: front, right, back, left
+    camera_angles = [(20, -60), (20, 30), (20, 120), (20, 210)]
+    labels = ["Front", "Right", "Back", "Left"]
 
-    # Compute camera distance from bounding sphere
-    bounds = mesh.bounds
-    center = (bounds[0] + bounds[1]) / 2
-    extent = np.linalg.norm(bounds[1] - bounds[0])
-    distance = extent * 2.0
+    vertices = mesh.vertices
+    faces = mesh.faces
 
-    for i, angle in enumerate(angles):
+    # Center and normalize
+    center = (vertices.max(axis=0) + vertices.min(axis=0)) / 2
+    scale = (vertices.max(axis=0) - vertices.min(axis=0)).max()
+    verts_norm = (vertices - center) / scale
+
+    for i, (elev, azim) in enumerate(camera_angles):
         path = str(Path(output_dir) / f"view_{i}.png")
         try:
-            rad = math.radians(angle)
+            fig = plt.figure(figsize=(5, 5), dpi=102)
+            ax = fig.add_subplot(111, projection='3d')
 
-            # Build camera transform: translate back, then rotate around Y
-            # Camera looks down -Z in its local frame
-            cam_transform = np.eye(4)
+            # Build polygon collection from faces
+            polygons = verts_norm[faces]
+            collection = Poly3DCollection(
+                polygons, alpha=0.95,
+                facecolors='#8CBEB2', edgecolors='#5A7D7C', linewidths=0.1
+            )
+            ax.add_collection3d(collection)
 
-            # Rotate around Y axis
-            rot = rotation_matrix(rad, [0, 1, 0], point=center)
+            # Set limits
+            ax.set_xlim(-0.6, 0.6)
+            ax.set_ylim(-0.6, 0.6)
+            ax.set_zlim(-0.6, 0.6)
 
-            # Camera position: offset from center along Z after rotation
-            cam_pos = center + np.array([
-                distance * math.sin(rad),
-                distance * 0.3,
-                distance * math.cos(rad),
-            ])
+            ax.view_init(elev=elev, azim=azim)
+            ax.set_axis_off()
+            ax.set_facecolor('#F3F4F6')
+            fig.patch.set_facecolor('#F3F4F6')
 
-            # Build look-at matrix manually
-            forward = center - cam_pos
-            forward = forward / np.linalg.norm(forward)
-            right = np.cross(forward, [0, 1, 0])
-            right = right / (np.linalg.norm(right) + 1e-8)
-            up = np.cross(right, forward)
-
-            cam_transform[:3, 0] = right
-            cam_transform[:3, 1] = up
-            cam_transform[:3, 2] = -forward
-            cam_transform[:3, 3] = cam_pos
-
-            scene = trimesh.Scene(mesh)
-            scene.camera_transform = cam_transform
-
-            png_data = scene.save_image(resolution=(512, 512))
-            if png_data is not None:
-                img = Image.open(trimesh.util.wrap_as_stream(png_data))
-                img.save(path)
-                views.append(path)
-            else:
-                raise RuntimeError("render returned None")
+            fig.savefig(path, bbox_inches='tight', pad_inches=0.05, dpi=102)
+            plt.close(fig)
+            views.append(path)
         except Exception as e:
             logger.warning(f"View {i} render failed: {e}, using placeholder")
-            img = Image.new("RGB", (512, 512), (200, 200, 200))
+            from PIL import Image as PILImage
+            img = PILImage.new("RGB", (512, 512), (200, 200, 200))
             img.save(path)
             views.append(path)
+            plt.close('all')
 
     return views
 

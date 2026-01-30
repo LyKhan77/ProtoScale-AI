@@ -15,7 +15,7 @@ onMounted(() => {
 <template>
   <div class="flex flex-col h-full animate-fade-in">
     <div class="text-center mb-6">
-      <h1 class="font-display text-2xl font-bold text-brand-dark dark:text-white transition-colors duration-300">Multi-Angle Analysis</h1>
+      <h1 class="font-display text-2xl font-bold text-brand-dark dark:text-white transition-colors duration-300">Multi-Angle Views</h1>
       <p class="text-gray-500 dark:text-gray-400 text-sm transition-colors duration-300">Review the generated perspectives before reconstruction.</p>
     </div>
 
