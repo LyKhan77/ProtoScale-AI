@@ -8,7 +8,7 @@ from pathlib import Path
 import trimesh
 
 from app.services.job_service import get_job_service
-from app.storage.local import get_job_storage
+from app.storage.local import get_job_storage, get_export_storage
 from app.utils import get_logger
 
 logger = get_logger(__name__)
@@ -32,12 +32,13 @@ def update_dimension(job_id: str):
     Returns:
         JSON with download URL:
         {
-            "download_url": "/download/<job_id>/stl_scaled",
+            "download_url": "/api/files/exports/<job_id>/<filename>",
             "scale": {"x": 1.0, "y": 1.0, "z": 1.0}
         }
     """
     job_service = get_job_service()
     job_storage = get_job_storage()
+    export_storage = get_export_storage()
 
     try:
         # Get job
@@ -60,7 +61,7 @@ def update_dimension(job_id: str):
         if not mesh_path:
             return jsonify({"error": "Mesh not found for this job"}), 404
 
-        # Load mesh
+        # Load mesh from job storage
         mesh_file = job_storage.get_path(f"{job_id}/{mesh_path}")
         if not mesh_file.exists():
             return jsonify({"error": "Mesh file not found"}), 404
@@ -70,16 +71,17 @@ def update_dimension(job_id: str):
         # Apply scaling
         mesh.apply_scale([scale['x'], scale['y'], scale['z']])
 
-        # Save scaled mesh
+        # Save scaled mesh to export storage
         scaled_filename = f"scaled_mesh_{scale['x']:.2f}x_{scale['y']:.2f}x_{scale['z']:.2f}x.stl"
-        scaled_path = job_storage.get_path(f"{job_id}/{scaled_filename}")
+        scaled_path = export_storage.get_path(f"{job_id}/{scaled_filename}")
+        scaled_path.parent.mkdir(parents=True, exist_ok=True)
 
         mesh.export(scaled_path)
 
         logger.info(f"Scaled mesh saved to {scaled_path}")
 
-        # Return download URL
-        download_url = f"/api/download/{job_id}/{scaled_filename}"
+        # Return download URL using the files/exports endpoint
+        download_url = f"/api/files/exports/{job_id}/{scaled_filename}"
 
         return jsonify({
             "download_url": download_url,
