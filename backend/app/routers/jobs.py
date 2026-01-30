@@ -87,15 +87,20 @@ async def job_status(job_id: str):
 
 @router.get("/jobs/{job_id}/result/{asset}")
 async def job_result(job_id: str, asset: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(404, "Job not found")
-
     if asset == "model.glb":
-        model_path = job.get("model_path")
-        if not model_path or not Path(model_path).exists():
-            raise HTTPException(404, "Model not ready")
-        return FileResponse(model_path, media_type="model/gltf-binary", filename="model.glb")
+        # First try in-memory job state
+        job = get_job(job_id)
+        if job:
+            model_path = job.get("model_path")
+            if model_path and Path(model_path).exists():
+                return FileResponse(model_path, media_type="model/gltf-binary", filename="model.glb")
+
+        # Fallback: check filesystem directly (for history/previous sessions)
+        disk_path = OUTPUTS_DIR / job_id / "model.glb"
+        if disk_path.exists():
+            return FileResponse(disk_path, media_type="model/gltf-binary", filename="model.glb")
+
+        raise HTTPException(404, "Model not ready")
 
     raise HTTPException(400, f"Unknown asset: {asset}")
 
