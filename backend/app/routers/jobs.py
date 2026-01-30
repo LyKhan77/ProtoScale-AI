@@ -40,9 +40,9 @@ async def upload_image(
     # Background removal if requested
     if remove_bg:
         try:
-            nobg_path = str(job_dir / f"nobg{ext}")
-            await run_in_thread(remove_background, raw_path, nobg_path)
-            image_path = nobg_path
+            nobg_path = str(job_dir / "nobg.png")
+            result_path = await run_in_thread(remove_background, raw_path, nobg_path)
+            image_path = result_path
         except Exception as e:
             logger.warning(f"Background removal failed, using original: {e}")
 
