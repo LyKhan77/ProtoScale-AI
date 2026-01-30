@@ -71,7 +71,28 @@ function processFile(file) {
         </div>
       </div>
     </div>
-    
+
+    <!-- Error Display -->
+    <div v-if="store.error" class="mt-6 max-w-2xl w-full bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-4 transition-colors duration-300">
+      <div class="flex items-start gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <h3 class="font-semibold text-red-900 dark:text-red-200 text-sm mb-1">Upload Failed</h3>
+          <p class="text-sm text-red-700 dark:text-red-300">{{ store.error }}</p>
+        </div>
+        <button
+          @click="store.error = null"
+          class="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Settings Toggles -->
     <div class="mt-8 flex gap-8">
       <CyberCheckbox 

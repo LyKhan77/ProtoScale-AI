@@ -20,8 +20,29 @@ function updateScale(e) {
 
 <template>
   <div class="h-[calc(100vh-160px)] w-full relative transition-colors duration-300">
+    <!-- Error Overlay -->
+    <div v-if="store.error" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 dark:bg-gray-900/95 transition-colors duration-300">
+      <div class="max-w-md w-full bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-lg p-6 mx-4">
+        <div class="flex items-start gap-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 class="font-semibold text-red-900 dark:text-red-200 mb-1">Reconstruction Failed</h3>
+            <p class="text-sm text-red-700 dark:text-red-300 mb-4">{{ store.error }}</p>
+            <button
+              @click="store.reset"
+              class="px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm font-medium"
+            >
+              Start Over
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Loading Overlay -->
-    <div v-if="store.isProcessing" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-gray-900/90 transition-colors duration-300">
+    <div v-else-if="store.isProcessing" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-gray-900/90 transition-colors duration-300">
       <div class="w-12 h-12 border-4 border-brand-teal border-t-transparent rounded-full animate-spin mb-6"></div>
       <div class="text-center">
         <h2 class="font-display text-xl font-bold mb-1 text-brand-dark dark:text-white transition-colors duration-300">Reconstructing Geometry</h2>

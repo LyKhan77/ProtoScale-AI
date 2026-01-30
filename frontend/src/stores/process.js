@@ -30,6 +30,20 @@ export const useProcessStore = defineStore('process', () => {
   // --- Getters ---
   const currentStep = computed(() => steps[currentStepIndex.value]);
 
+  const statusMessage = computed(() => {
+    const statusMap = {
+      'uploaded': 'Initializing...',
+      'generating_multi_angles': 'Generating multi-angle views',
+      'preprocessing': 'Removing background',
+      'reconstructing_3d': 'Reconstructing 3D geometry',
+      'mesh_repairing': 'Repairing mesh',
+      'exporting_stl': 'Exporting files',
+      'done': 'Complete',
+      'error': 'Failed'
+    };
+    return statusMap[jobStatus.value] || 'Processing...';
+  });
+
   // --- API Helper ---
   async function fetchApi(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -259,6 +273,7 @@ export const useProcessStore = defineStore('process', () => {
     steps,
     currentStepIndex,
     currentStep,
+    statusMessage,
     isProcessing,
     progress,
     error,
