@@ -9,7 +9,7 @@ OUTPUTS_DIR = STORAGE_DIR / "outputs"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost:5177").split(",")
+CORS_ORIGINS = ["*"]  # Allow all origins during development
 
 # GPU config
 DEVICE = os.getenv("HUNYUAN_DEVICE", "cuda:0")
