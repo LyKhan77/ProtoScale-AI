@@ -47,36 +47,52 @@ def _render_views_from_mesh(mesh, output_dir: str) -> list[str]:
     import trimesh
     import numpy as np
     from PIL import Image
+    from trimesh.transformations import rotation_matrix, translation_matrix
 
     views = []
     angles = [0, 90, 180, 270]
 
-    scene = trimesh.Scene(mesh)
+    # Compute camera distance from bounding sphere
+    bounds = mesh.bounds
+    center = (bounds[0] + bounds[1]) / 2
+    extent = np.linalg.norm(bounds[1] - bounds[0])
+    distance = extent * 2.0
+
     for i, angle in enumerate(angles):
         path = str(Path(output_dir) / f"view_{i}.png")
         try:
-            # Rotate camera around Y axis
             rad = math.radians(angle)
-            # Get bounding sphere for camera distance
-            bounds = mesh.bounds
-            center = (bounds[0] + bounds[1]) / 2
-            extent = np.linalg.norm(bounds[1] - bounds[0])
-            distance = extent * 1.5
 
-            camera_pos = center + np.array([
+            # Build camera transform: translate back, then rotate around Y
+            # Camera looks down -Z in its local frame
+            cam_transform = np.eye(4)
+
+            # Rotate around Y axis
+            rot = rotation_matrix(rad, [0, 1, 0], point=center)
+
+            # Camera position: offset from center along Z after rotation
+            cam_pos = center + np.array([
                 distance * math.sin(rad),
                 distance * 0.3,
                 distance * math.cos(rad),
             ])
 
-            rotation = trimesh.scene.cameras.look_at(
-                [camera_pos], [center], up=[0, 1, 0]
-            )
+            # Build look-at matrix manually
+            forward = center - cam_pos
+            forward = forward / np.linalg.norm(forward)
+            right = np.cross(forward, [0, 1, 0])
+            right = right / (np.linalg.norm(right) + 1e-8)
+            up = np.cross(right, forward)
 
-            render_scene = trimesh.Scene(mesh)
-            render_scene.camera_transform = rotation[0]
+            cam_transform[:3, 0] = right
+            cam_transform[:3, 1] = up
+            cam_transform[:3, 2] = -forward
+            cam_transform[:3, 3] = cam_pos
 
-            png_data = render_scene.save_image(resolution=(512, 512))
+            scene = trimesh.Scene(mesh)
+            scene.camera_transform = cam_transform
+
+            png_data = scene.save_image(resolution=(512, 512))
             if png_data is not None:
                 img = Image.open(trimesh.util.wrap_as_stream(png_data))
                 img.save(path)
@@ -85,7 +101,6 @@ def _render_views_from_mesh(mesh, output_dir: str) -> list[str]:
                 raise RuntimeError("render returned None")
         except Exception as e:
             logger.warning(f"View {i} render failed: {e}, using placeholder")
-            # Create a simple placeholder image
             img = Image.new("RGB", (512, 512), (200, 200, 200))
             img.save(path)
             views.append(path)
