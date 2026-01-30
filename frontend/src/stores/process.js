@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8077';
 
 export const useProcessStore = defineStore('process', () => {
   // --- State ---
-  const steps = ['Upload', 'Preview', 'Export'];
+  const steps = ['Upload', 'Generate', 'Preview', 'Export'];
   const currentStepIndex = ref(0);
   const isProcessing = ref(false);
   const progress = ref(0);
@@ -41,11 +41,10 @@ export const useProcessStore = defineStore('process', () => {
 
   // --- Actions ---
 
-  // 1. Upload + Generate 3D
+  // 1. Upload only — show preview, wait for user to click Generate
   async function uploadImage(file, options = {}) {
     isProcessing.value = true;
     error.value = null;
-    progress.value = 0;
 
     try {
       uploadedImage.value = URL.createObjectURL(file);
@@ -64,7 +63,21 @@ export const useProcessStore = defineStore('process', () => {
       const data = await res.json();
       jobId.value = data.job_id;
 
-      // Trigger 3D generation immediately
+      isProcessing.value = false;
+    } catch (e) {
+      error.value = e.message;
+      isProcessing.value = false;
+    }
+  }
+
+  // 2. Navigate to progress view and trigger 3D generation
+  async function generate3D() {
+    if (!jobId.value) return;
+    isProcessing.value = true;
+    progress.value = 0;
+    error.value = null;
+
+    try {
       await fetch(`${API_BASE}/api/jobs/${jobId.value}/generate-3d`, {
         method: 'POST',
       });
@@ -81,7 +94,7 @@ export const useProcessStore = defineStore('process', () => {
 
       isProcessing.value = false;
       progress.value = 0;
-      currentStepIndex.value = 1; // Go to Preview
+      currentStepIndex.value = 2; // Go to Preview
     } catch (e) {
       error.value = e.message;
       isProcessing.value = false;
@@ -89,9 +102,14 @@ export const useProcessStore = defineStore('process', () => {
     }
   }
 
-  // 2. Confirm & Export
+  // Navigate to Generate step (ProgressView)
+  function goToGenerate() {
+    currentStepIndex.value = 1;
+  }
+
+  // 3. Confirm & Export
   function confirmModel() {
-    currentStepIndex.value = 2;
+    currentStepIndex.value = 3;
   }
 
   function reset() {
@@ -120,6 +138,8 @@ export const useProcessStore = defineStore('process', () => {
     analysisData,
     userScale,
     uploadImage,
+    generate3D,
+    goToGenerate,
     confirmModel,
     reset,
   };

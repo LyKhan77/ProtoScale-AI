@@ -6,6 +6,7 @@ import AppHeader from './components/AppHeader.vue';
 import ProcessStepper from './components/ProcessStepper.vue';
 import GravityStars from './components/GravityStars.vue';
 import UploadView from './views/UploadView.vue';
+import ProgressView from './views/ProgressView.vue';
 import PreviewView from './views/PreviewView.vue';
 import ExportView from './views/ExportView.vue';
 
@@ -15,8 +16,9 @@ const theme = useThemeStore(); // Initialize theme
 const currentView = computed(() => {
   switch (store.currentStepIndex) {
     case 0: return UploadView;
-    case 1: return PreviewView;
-    case 2: return ExportView;
+    case 1: return ProgressView;
+    case 2: return PreviewView;
+    case 3: return ExportView;
     default: return UploadView;
   }
 });
