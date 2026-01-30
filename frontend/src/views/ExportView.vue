@@ -1,11 +1,65 @@
 <script setup>
+import { ref } from 'vue';
 import { useProcessStore } from '../stores/process';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
 
 const store = useProcessStore();
+const isExporting = ref(false);
 
-function downloadFile(ext) {
-  // Mock download
-  alert(`Downloading ${ext} file...`);
+function downloadSTL() {
+  const scene = store.modelScene;
+  if (!scene) {
+    alert('No model loaded');
+    return;
+  }
+  isExporting.value = true;
+
+  try {
+    const cloned = scene.clone();
+    const s = store.userScale;
+    cloned.scale.set(s.x, s.y, s.z);
+    cloned.updateMatrixWorld(true);
+
+    const exporter = new STLExporter();
+    const result = exporter.parse(cloned, { binary: true });
+    const blob = new Blob([result], { type: 'application/octet-stream' });
+    triggerDownload(blob, 'model.stl');
+  } finally {
+    isExporting.value = false;
+  }
+}
+
+function downloadOBJ() {
+  const scene = store.modelScene;
+  if (!scene) {
+    alert('No model loaded');
+    return;
+  }
+  isExporting.value = true;
+
+  try {
+    const cloned = scene.clone();
+    const s = store.userScale;
+    cloned.scale.set(s.x, s.y, s.z);
+    cloned.updateMatrixWorld(true);
+
+    const exporter = new OBJExporter();
+    const result = exporter.parse(cloned);
+    const blob = new Blob([result], { type: 'text/plain' });
+    triggerDownload(blob, 'model.obj');
+  } finally {
+    isExporting.value = false;
+  }
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 
@@ -22,10 +76,17 @@ function downloadFile(ext) {
       Your geometry is ready for manufacturing.
     </p>
 
+    <!-- Exporting spinner -->
+    <div v-if="isExporting" class="mb-4 flex items-center gap-2 text-brand-teal">
+      <div class="w-4 h-4 border-2 border-brand-teal border-t-transparent rounded-full animate-spin"></div>
+      <span class="font-mono text-sm">Exporting...</span>
+    </div>
+
     <div class="grid gap-4 w-full max-w-md">
-      <button 
-        @click="downloadFile('STL')"
-        class="flex items-center justify-between w-full p-4 bg-brand-dark dark:bg-gray-700 text-white rounded-xl shadow-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors group"
+      <button
+        @click="downloadSTL"
+        :disabled="isExporting"
+        class="flex items-center justify-between w-full p-4 bg-brand-dark dark:bg-gray-700 text-white rounded-xl shadow-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors group disabled:opacity-50"
       >
         <div class="flex items-center gap-3">
           <div class="bg-white/10 p-2 rounded-lg">
@@ -35,15 +96,16 @@ function downloadFile(ext) {
           </div>
           <div class="text-left">
             <div class="font-bold">Download .STL</div>
-            <div class="text-xs text-gray-400">Binary format • ~12MB</div>
+            <div class="text-xs text-gray-400">Binary format</div>
           </div>
         </div>
         <span class="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
       </button>
 
-      <button 
-        @click="downloadFile('OBJ')"
-        class="flex items-center justify-between w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-brand-dark dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      <button
+        @click="downloadOBJ"
+        :disabled="isExporting"
+        class="flex items-center justify-between w-full p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-brand-dark dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
       >
         <div class="flex items-center gap-3">
           <div class="bg-gray-100 dark:bg-gray-900 p-2 rounded-lg transition-colors duration-300">
@@ -53,13 +115,13 @@ function downloadFile(ext) {
           </div>
           <div class="text-left">
             <div class="font-bold">Download .OBJ</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">Source mesh • ~14MB</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">Source mesh</div>
           </div>
         </div>
       </button>
     </div>
 
-    <button 
+    <button
       @click="store.reset"
       class="mt-12 text-sm text-gray-400 dark:text-gray-500 hover:text-brand-teal dark:hover:text-brand-teal transition-colors"
     >

@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, shallowRef } from 'vue';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8077';
 
 export const useProcessStore = defineStore('process', () => {
   // --- State ---
@@ -9,84 +11,143 @@ export const useProcessStore = defineStore('process', () => {
   const progress = ref(0);
   const error = ref(null);
   const uploadedImage = ref(null);
-  
-  // Mock Data Containers
+
+  const jobId = ref(null);
   const multiAngleImages = ref([]);
   const modelUrl = ref(null);
+  const modelScene = shallowRef(null);
   const analysisData = ref(null);
+  const userScale = ref({ x: 1, y: 1, z: 1 });
 
   // --- Getters ---
   const currentStep = computed(() => steps[currentStepIndex.value]);
 
+  // --- Helpers ---
+  async function pollUntilDone(id, timeoutMs = 600000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const res = await fetch(`${API_BASE}/api/jobs/${id}/status`);
+      if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
+      const data = await res.json();
+
+      progress.value = data.progress || 0;
+
+      if (data.status === 'completed') return data;
+      if (data.status === 'failed') throw new Error(data.error || 'Job failed');
+
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    throw new Error('Job timed out (10 minutes)');
+  }
+
   // --- Actions ---
-  
+
   // 1. Upload
-  async function uploadImage(file) {
+  async function uploadImage(file, options = {}) {
     isProcessing.value = true;
     error.value = null;
-    
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    uploadedImage.value = URL.createObjectURL(file);
-    isProcessing.value = false;
-    currentStepIndex.value = 1; // Move to Review
+
+    try {
+      uploadedImage.value = URL.createObjectURL(file);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('remove_bg', options.removeBackground ?? true);
+      formData.append('enhanced_detail', options.enhancedDetail ?? false);
+
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const data = await res.json();
+      jobId.value = data.job_id;
+
+      isProcessing.value = false;
+      currentStepIndex.value = 1;
+    } catch (e) {
+      error.value = e.message;
+      isProcessing.value = false;
+    }
   }
 
   // 2. Generate Multi-Angle
   async function generateMultiAngle() {
+    if (!jobId.value) return;
     isProcessing.value = true;
     progress.value = 0;
+    error.value = null;
 
-    const interval = setInterval(() => {
-      progress.value += 10;
-      if (progress.value >= 100) clearInterval(interval);
-    }, 300);
+    try {
+      await fetch(`${API_BASE}/api/jobs/${jobId.value}/generate-multiangle`, {
+        method: 'POST',
+      });
 
-    await new Promise(resolve => setTimeout(resolve, 3500));
+      await pollUntilDone(jobId.value);
 
-    // Mock 4 angles
-    multiAngleImages.value = [
-      uploadedImage.value, // Front (reuse original)
-      uploadedImage.value, // Right (placeholder)
-      uploadedImage.value, // Back (placeholder)
-      uploadedImage.value  // Left (placeholder)
-    ];
+      // Fetch the 4 view images
+      multiAngleImages.value = [0, 1, 2, 3].map(
+        i => `${API_BASE}/api/jobs/${jobId.value}/result/view_${i}.png`
+      );
 
-    isProcessing.value = false;
-    progress.value = 0;
+      isProcessing.value = false;
+      progress.value = 0;
+    } catch (e) {
+      error.value = e.message;
+      isProcessing.value = false;
+      progress.value = 0;
+    }
   }
 
   // 3. Generate 3D Mesh
   async function generateMesh() {
+    if (!jobId.value) return;
     isProcessing.value = true;
-    
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // We will use a standard primitive or a public GLB if available, 
-    // but for now we set a flag that the viewer component can read to load its placeholder.
-    modelUrl.value = 'placeholder-cube'; 
-    
-    analysisData.value = {
-      watertight: true,
-      dimensions: { x: 45.2, y: 30.0, z: 12.5 },
-      volume: 1205.4
-    };
+    progress.value = 0;
+    error.value = null;
 
-    isProcessing.value = false;
-    currentStepIndex.value = 2; // Move to Preview
+    try {
+      await fetch(`${API_BASE}/api/jobs/${jobId.value}/generate-3d`, {
+        method: 'POST',
+      });
+
+      await pollUntilDone(jobId.value);
+
+      modelUrl.value = `${API_BASE}/api/jobs/${jobId.value}/result/model.glb`;
+
+      analysisData.value = {
+        watertight: true,
+        dimensions: { x: 0, y: 0, z: 0 },
+        volume: 0,
+      };
+
+      isProcessing.value = false;
+      progress.value = 0;
+      currentStepIndex.value = 2;
+    } catch (e) {
+      error.value = e.message;
+      isProcessing.value = false;
+      progress.value = 0;
+    }
   }
 
   // 4. Confirm & Export
   function confirmModel() {
-    currentStepIndex.value = 3; // Move to Export
+    currentStepIndex.value = 3;
   }
 
   function reset() {
     currentStepIndex.value = 0;
+    jobId.value = null;
     uploadedImage.value = null;
     multiAngleImages.value = [];
     modelUrl.value = null;
+    modelScene.value = null;
+    analysisData.value = null;
+    userScale.value = { x: 1, y: 1, z: 1 };
+    error.value = null;
+    progress.value = 0;
   }
 
   return {
@@ -97,13 +158,16 @@ export const useProcessStore = defineStore('process', () => {
     progress,
     error,
     uploadedImage,
+    jobId,
     multiAngleImages,
     modelUrl,
+    modelScene,
     analysisData,
+    userScale,
     uploadImage,
     generateMultiAngle,
     generateMesh,
     confirmModel,
-    reset
+    reset,
   };
 });

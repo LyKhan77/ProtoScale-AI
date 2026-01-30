@@ -22,7 +22,10 @@ function handleFileSelect(e) {
 
 function processFile(file) {
   if (file.type.startsWith('image/')) {
-    store.uploadImage(file);
+    store.uploadImage(file, {
+      removeBackground: removeBackground.value,
+      enhancedDetail: enhancedDetail.value,
+    });
   } else {
     alert('Please upload an image file (JPG/PNG).');
   }
@@ -38,6 +41,11 @@ function processFile(file) {
       </p>
     </div>
 
+    <!-- Error Banner -->
+    <div v-if="store.error" class="w-full max-w-2xl mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+      {{ store.error }}
+    </div>
+
     <div
       class="w-full max-w-2xl aspect-[16/9] border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 group relative overflow-hidden bg-brand-gray/30 dark:bg-gray-800/50"
       :class="isDragging ? 'border-brand-teal bg-brand-teal/5 dark:bg-brand-teal/10' : 'border-gray-300 dark:border-gray-700 hover:border-brand-dark dark:hover:border-gray-500'"
@@ -46,17 +54,17 @@ function processFile(file) {
       @drop.prevent="handleDrop"
       @click="fileInput.click()"
     >
-      <input 
-        type="file" 
-        ref="fileInput" 
-        class="hidden" 
-        accept="image/png, image/jpeg" 
+      <input
+        type="file"
+        ref="fileInput"
+        class="hidden"
+        accept="image/png, image/jpeg"
         @change="handleFileSelect"
       />
-      
+
       <div v-if="store.isProcessing" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-10 flex flex-col items-center justify-center backdrop-blur-sm transition-colors duration-300">
         <div class="w-8 h-8 border-4 border-brand-teal border-t-transparent rounded-full animate-spin mb-4"></div>
-        <span class="font-mono text-sm animate-pulse text-brand-dark dark:text-white">ANALYZING INPUT...</span>
+        <span class="font-mono text-sm animate-pulse text-brand-dark dark:text-white">UPLOADING...</span>
       </div>
 
       <div class="flex flex-col items-center gap-4 group-hover:scale-105 transition-transform duration-300">
@@ -71,16 +79,16 @@ function processFile(file) {
         </div>
       </div>
     </div>
-    
+
     <!-- Settings Toggles -->
     <div class="mt-8 flex gap-8">
-      <CyberCheckbox 
-        v-model="removeBackground" 
-        label="Remove Background" 
+      <CyberCheckbox
+        v-model="removeBackground"
+        label="Remove Background"
       />
-      <CyberCheckbox 
-        v-model="enhancedDetail" 
-        label="Enhanced Detail (Slow)" 
+      <CyberCheckbox
+        v-model="enhancedDetail"
+        label="Enhanced Detail (Slow)"
       />
     </div>
   </div>
